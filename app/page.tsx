@@ -17,7 +17,7 @@ const ETIQUETAS_VENTA = {
 };
 
 // ─── MODAL EDITAR PRODUCTO ───────────────────────────────────────────────────
-function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }) {
+function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }: any) {
   const [form, setForm] = useState({
     id: producto.id,
     nombre: producto.nombre || '',
@@ -120,7 +120,7 @@ function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }) 
 }
 
 // ─── MODAL PLANES ────────────────────────────────────────────────────────────
-function ModalPlanes({ onCerrar, productoCount }) {
+function ModalPlanes({ onCerrar, productoCount }: any) {
   const msgPro = encodeURIComponent('¡Hola! Quiero el Plan Pro de Vendemos Fácil ($9.990/mes, hasta 30 productos) 🛒');
   const msgFull = encodeURIComponent('¡Hola! Quiero el Plan Full de Vendemos Fácil ($19.990/mes, productos ilimitados) 🚀');
 
@@ -624,7 +624,7 @@ function TiendaPublica({ slug }) {
 
 
 // ─── PÁGINA TIENDAS PÚBLICAS ─────────────────────────────────────────────────
-function PaginaTiendas({ onVolver, onRegistro }) {
+function PaginaTiendas({ onVolver, onRegistro }: any) {
   const [tiendasPublicas, setTiendasPublicas] = useState([]);
   const [loadingT, setLoadingT] = useState(true);
 
