@@ -1,9 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import dynamic from 'next/dynamic';
-const Cropper = dynamic(() => import('react-easy-crop'), { ssr: false });
-
+import React, { useState, useEffect } from 'react';
 import { LogOut, Plus, Store, ShoppingBag, Send, X, Eye, Lock, ChevronRight, Truck, Star, Users, Zap, Crown, Camera, ImagePlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -819,9 +816,7 @@ export default function VendeFacilChile() {
   const [subiendoFoto, setSubiendoFoto] = useState(false);
   const [imagenOriginal, setImagenOriginal] = useState(null);
   const [mostrarCrop, setMostrarCrop] = useState(false);
-  const [crop, setCrop] = useState({ x: 0, y: 0 });
-  const [zoom, setZoom] = useState(1);
-  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+  const [crop, setCrop] = useState('center');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [resetEmail, setResetEmail] = useState('');
   const [mostrarModalPlanes, setMostrarModalPlanes] = useState(false);
@@ -937,32 +932,16 @@ export default function VendeFacilChile() {
     finally { setLoading(false); }
   };
 
-  const getCroppedImg = async (imageSrc, pixelCrop) => {
-    const image = new Image();
-    image.src = imageSrc;
-    await new Promise(resolve => { image.onload = resolve; });
-    const canvas = document.createElement('canvas');
-    canvas.width = pixelCrop.width;
-    canvas.height = pixelCrop.height;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
-    return new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.9));
-  };
-
-  const onCropComplete = useCallback((_, croppedPixels) => {
-    setCroppedAreaPixels(croppedPixels);
-  }, []);
-
-  const handleConfirmarCrop = async () => {
-    try {
-      const blob = await getCroppedImg(imagenOriginal, croppedAreaPixels);
-      const file = new File([blob], 'producto.jpg', { type: 'image/jpeg' });
-      setImagenFile(file);
-      setImagenPreview(URL.createObjectURL(blob));
-      setMostrarCrop(false);
-    } catch (e) {
-      console.error(e);
-    }
+  const handleConfirmarCrop = () => {
+    setImagenPreview(imagenOriginal);
+    fetch(imagenOriginal)
+      .then(r => r.blob())
+      .then(blob => {
+        const file = new File([blob], 'producto.jpg', { type: 'image/jpeg' });
+        setImagenFile(file);
+        setFormProducto(f => ({...f, imagen_posicion: crop}));
+        setMostrarCrop(false);
+      });
   };
 
   const handleImagenChange = (e) => {
@@ -1463,31 +1442,35 @@ export default function VendeFacilChile() {
             <div className="bg-white rounded-3xl overflow-hidden w-full max-w-lg">
               <div className="bg-gradient-to-r from-[#16a34a] to-[#ea580c] p-4 text-white text-center">
                 <h3 className="font-black text-lg">Encuadra tu foto</h3>
-                <p className="text-green-100 text-sm">Arrastra para mover · Pellizca para hacer zoom</p>
+                <p className="text-green-100 text-sm">Elige qué parte quieres mostrar</p>
               </div>
-              <div className="relative" style={{height: '300px', background: '#111'}}>
-                <Cropper
-                  image={imagenOriginal}
-                  crop={crop}
-                  zoom={zoom}
-                  aspect={4/3}
-                  onCropChange={setCrop}
-                  onZoomChange={setZoom}
-                  onCropComplete={onCropComplete}
-                />
+              <div className="relative w-full overflow-hidden bg-gray-100" style={{height:'250px'}}>
+                <img src={imagenOriginal} alt="preview"
+                  className="absolute w-full h-full object-cover transition-all"
+                  style={{objectPosition: crop === 'top' ? 'top' : crop === 'bottom' ? 'bottom' : 'center'}} />
               </div>
-              <div className="p-4 space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-gray-600 mb-1 block">Zoom</label>
-                  <input type="range" min={1} max={3} step={0.01} value={zoom}
-                    onChange={e => setZoom(Number(e.target.value))}
-                    className="w-full accent-green-600" />
+              <div className="p-5 space-y-4">
+                <p className="text-sm font-bold text-gray-600 text-center">¿Qué parte de la foto quieres mostrar?</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    {val:'top', label:'⬆️ Arriba'},
+                    {val:'center', label:'⏺ Centro'},
+                    {val:'bottom', label:'⬇️ Abajo'},
+                  ].map(op => (
+                    <button key={op.val} type="button"
+                      onClick={() => setCrop(op.val)}
+                      className={`py-3 rounded-xl text-sm font-black border-2 transition ${crop === op.val ? 'border-[#16a34a] bg-green-50 text-[#16a34a]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
+                      {op.label}
+                    </button>
+                  ))}
                 </div>
                 <div className="flex gap-3">
-                  <button onClick={() => setMostrarCrop(false)} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50">
+                  <button onClick={() => setMostrarCrop(false)}
+                    className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50">
                     Cancelar
                   </button>
-                  <button onClick={handleConfirmarCrop} className="flex-1 py-3 bg-[#16a34a] hover:bg-[#ea580c] text-white rounded-xl font-black transition">
+                  <button onClick={handleConfirmarCrop}
+                    className="flex-1 py-3 bg-[#16a34a] hover:bg-[#ea580c] text-white rounded-xl font-black transition">
                     ✓ Usar esta foto
                   </button>
                 </div>
