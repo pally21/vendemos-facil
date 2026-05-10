@@ -131,7 +131,7 @@ function TiendaPublica({ slug }) {
       <div className="bg-gradient-to-r from-[#16a34a] to-[#ea580c] text-white py-10 px-4 text-center">
         {tienda.logo_url && (
           <div className="flex justify-center mb-4">
-            <img src={tienda.logo_url} alt={tienda.nombre} className="h-20 w-auto object-contain rounded-2xl shadow-lg bg-white/10 p-1" />
+            <img src={tienda.logo_url || ""} alt={tienda.nombre} className="h-20 w-auto object-contain rounded-2xl shadow-lg bg-white/10 p-1" />
           </div>
         )}
         <p className="text-green-200 text-sm font-medium mb-1 uppercase tracking-widest">Tienda Online</p>
@@ -158,7 +158,7 @@ function TiendaPublica({ slug }) {
                     {/* Foto */}
                     <div className="overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center" style={{aspectRatio:"4/3"}}>
                       {p.imagen
-                        ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover object-center" style={{aspectRatio:"4/3"}} />
+                        ? <img src={p.imagen || ""} alt={p.nombre} className="w-full h-full object-cover" style={{display:"block"}} />
                         : <Camera className="w-10 h-10 text-gray-300" />}
                     </div>
 
@@ -240,7 +240,7 @@ function TiendaPublica({ slug }) {
                     <div key={i.id} className="flex items-center gap-3 border-b border-gray-50 pb-3">
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
                         {i.imagen
-                          ? <img src={i.imagen} alt={i.nombre} className="w-full h-full object-cover" style={{objectPosition: p.imagen_posicion || 'center'}} />
+                          ? <img src={i.imagen || ""} alt={i.nombre} className="w-full h-full object-cover" />
                           : <ShoppingBag className="w-5 h-5 text-gray-400" />}
                       </div>
                       <div className="flex-1 min-w-0">
