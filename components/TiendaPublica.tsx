@@ -156,9 +156,9 @@ function TiendaPublica({ slug }) {
                 return (
                   <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-green-100 overflow-hidden hover:shadow-md transition-all">
                     {/* Foto */}
-                    <div className="h-52 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center">
+                    <div className="overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center" style={{aspectRatio:"4/3"}}>
                       {p.imagen
-                        ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" />
+                        ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover object-center" style={{aspectRatio:"4/3"}} />
                         : <Camera className="w-10 h-10 text-gray-300" />}
                     </div>
 
