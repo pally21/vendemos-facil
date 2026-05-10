@@ -814,9 +814,6 @@ export default function VendeFacilChile() {
   const [imagenFile, setImagenFile] = useState(null);
   const [imagenPreview, setImagenPreview] = useState(null);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
-  const [imagenOriginal, setImagenOriginal] = useState(null);
-  const [mostrarCrop, setMostrarCrop] = useState(false);
-  const [crop, setCrop] = useState('center');
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [resetEmail, setResetEmail] = useState('');
   const [mostrarModalPlanes, setMostrarModalPlanes] = useState(false);
@@ -932,27 +929,12 @@ export default function VendeFacilChile() {
     finally { setLoading(false); }
   };
 
-  const handleConfirmarCrop = () => {
-    setImagenPreview(imagenOriginal);
-    fetch(imagenOriginal)
-      .then(r => r.blob())
-      .then(blob => {
-        const file = new File([blob], 'producto.jpg', { type: 'image/jpeg' });
-        setImagenFile(file);
-        setFormProducto(f => ({...f, imagen_posicion: crop}));
-        setMostrarCrop(false);
-      });
-  };
-
   const handleImagenChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { setError('La foto no puede superar 5MB'); return; }
-    const url = URL.createObjectURL(file);
-    setImagenOriginal(url);
-    setCrop({ x: 0, y: 0 });
-    setZoom(1);
-    setMostrarCrop(true);
+    setImagenFile(file);
+    setImagenPreview(URL.createObjectURL(file));
     setError('');
   };
 
@@ -1437,47 +1419,6 @@ export default function VendeFacilChile() {
     return (
       <div className="min-h-screen bg-gray-50 font-['DM_Sans']">
         <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&family=Fraunces:wght@700;900&display=swap');`}</style>
-        {mostrarCrop && imagenOriginal && (
-          <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
-            <div className="bg-white rounded-3xl overflow-hidden w-full max-w-lg">
-              <div className="bg-gradient-to-r from-[#16a34a] to-[#ea580c] p-4 text-white text-center">
-                <h3 className="font-black text-lg">Encuadra tu foto</h3>
-                <p className="text-green-100 text-sm">Elige qué parte quieres mostrar</p>
-              </div>
-              <div className="relative w-full overflow-hidden bg-gray-100" style={{height:'250px'}}>
-                <img src={imagenOriginal} alt="preview"
-                  className="w-full h-full object-cover"
-                  style={{objectPosition: crop === 'top' ? 'top' : crop === 'bottom' ? 'bottom' : 'center'}} />
-              </div>
-              <div className="p-5 space-y-4">
-                <p className="text-sm font-bold text-gray-600 text-center">¿Qué parte de la foto quieres mostrar?</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    {val:'top', label:'⬆️ Arriba'},
-                    {val:'center', label:'⏺ Centro'},
-                    {val:'bottom', label:'⬇️ Abajo'},
-                  ].map(op => (
-                    <button key={op.val} type="button"
-                      onClick={() => setCrop(op.val)}
-                      className={`py-3 rounded-xl text-sm font-black border-2 transition ${crop === op.val ? 'border-[#16a34a] bg-green-50 text-[#16a34a]' : 'border-gray-200 text-gray-500 hover:border-gray-300'}`}>
-                      {op.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex gap-3">
-                  <button onClick={() => setMostrarCrop(false)}
-                    className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50">
-                    Cancelar
-                  </button>
-                  <button onClick={handleConfirmarCrop}
-                    className="flex-1 py-3 bg-[#16a34a] hover:bg-[#ea580c] text-white rounded-xl font-black transition">
-                    ✓ Usar esta foto
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
         {mostrarModalPlanes && <ModalPlanes onCerrar={() => setMostrarModalPlanes(false)} productoCount={productos.length} miTienda={miTienda} userEmail={user?.email} />}
         {editandoProducto && (
           <ModalEditarProducto
