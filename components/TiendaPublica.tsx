@@ -59,7 +59,8 @@ function TiendaPublica({ slug }) {
   };
 
   const subtotal = carrito.reduce((t, i) => t + i.precio * i.cantidad, 0);
-  const delivery = subtotal > 0 && subtotal < 10000 ? 1000 : 0;
+  const costoDelivery = tienda?.delivery_costo || 0;
+  const delivery = subtotal > 0 && costoDelivery > 0 ? costoDelivery : 0;
   const recargoDia = formCompra.diaDespacho === 'otro' ? 1000 : 0;
   const total = subtotal + delivery + recargoDia;
 
@@ -93,6 +94,7 @@ function TiendaPublica({ slug }) {
     });
     msg += `\n💰 *Subtotal:* $${subtotal.toLocaleString('es-CL')}`;
     if (delivery > 0) msg += `\n🚚 *Delivery:* $${delivery.toLocaleString('es-CL')}`;
+    else if (costoDelivery === 0) msg += `\n🚚 *Delivery:* ¡GRATIS!`;
     else msg += `\n🚚 *Delivery:* ¡GRATIS!`;
     if (recargoDia > 0) msg += `\n📅 *Recargo día especial:* $${recargoDia.toLocaleString('es-CL')}`;
     msg += `\n\n✅ *TOTAL: $${total.toLocaleString('es-CL')}*`;
@@ -260,7 +262,7 @@ function TiendaPublica({ slug }) {
                     <span className="flex items-center gap-1 text-gray-600"><Truck className="w-3 h-3" /> Delivery</span>
                     {delivery === 0
                       ? <span className="text-[#16a34a] font-bold">¡GRATIS!</span>
-                      : <span className="text-orange-500 font-bold">+$1.000</span>
+                      : <span className="text-orange-500 font-bold">+${delivery.toLocaleString('es-CL')}</span>
                     }
                   </div>
                   {delivery > 0 && subtotal < 10000 && (
@@ -394,7 +396,22 @@ function TiendaPublica({ slug }) {
         </div>
       </div>
 
-      <div className="text-center py-8 text-xs text-gray-400">
+      {/* Aviso legal */}
+      <div className="max-w-4xl mx-auto px-4 pb-8">
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5">
+          <p className="text-amber-800 font-black text-sm mb-2">⚠️ Aviso importante para compradores</p>
+          <p className="text-amber-700 text-xs leading-relaxed">
+            Vendemos Fácil es una plataforma de apoyo para vendedores independientes. No somos responsables por daños, perjuicios o inconvenientes derivados de las transacciones. Te recomendamos:
+          </p>
+          <ul className="mt-2 space-y-1 text-xs text-amber-700">
+            <li>✓ Verificar las condiciones de entrega antes de confirmar tu pedido</li>
+            <li>✓ Coordinar entregas en lugares seguros y públicos (metro, comisaría, mall, etc.)</li>
+            <li>✓ Confirmar los métodos de pago directamente con el vendedor</li>
+            <li>✓ Guardar el registro de tu conversación por WhatsApp</li>
+          </ul>
+        </div>
+      </div>
+      <div className="text-center py-6 text-xs text-gray-400">
         Powered by <span className="font-bold text-[#16a34a]">Vendemos Fácil</span>
       </div>
     </div>
