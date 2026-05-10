@@ -397,7 +397,7 @@ function TiendaPublica({ slug }) {
                     {/* Foto */}
                     <div className="h-52 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center">
                       {p.imagen
-                        ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" style={{objectPosition: p.imagen_posicion || 'center'}} />
+                        ? <img src={p.imagen || ""} alt={p.nombre} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display="none"; }} />
                         : <Camera className="w-10 h-10 text-gray-300" />}
                     </div>
 
