@@ -1070,7 +1070,7 @@ export default function VendeFacilChile() {
         <header className="sticky top-0 z-50 bg-white backdrop-blur-md border-b-2 border-orange-100 shadow-sm">
           <nav className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <img src="/logo.svg" alt="Vendemos Fácil" className="h-12 w-12 object-contain" onError={e => { e.currentTarget.src='/logo.jpeg'; }} />
+              <img src="/logo-vende-facil-nuevo.svg" alt="Vendemos Fácil" className="h-14 w-14 object-contain" onError={e => { e.currentTarget.src='/logo.jpeg'; }} />
               <span className="text-xl font-black text-[#16a34a] font-['Fraunces']">Vendemos Fácil</span>
             </div>
             <div className="flex gap-3">
@@ -1409,7 +1409,7 @@ export default function VendeFacilChile() {
         <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
           <nav className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <img src="/logo.svg" alt="Vendemos Fácil" className="h-10 w-10 object-contain" onError={e => { e.target.style.display='none'; }} />
+              <img src="/logo-vende-facil-nuevo.svg" alt="Vendemos Fácil" className="h-12 w-12 object-contain" onError={e => { e.target.style.display='none'; }} />
               <span className="text-lg font-black text-[#16a34a] font-['Fraunces']">Vendemos Fácil</span>
             </div>
             <div className="flex gap-3 items-center">
