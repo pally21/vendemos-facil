@@ -1446,7 +1446,7 @@ export default function VendeFacilChile() {
               </div>
               <div className="relative w-full overflow-hidden bg-gray-100" style={{height:'250px'}}>
                 <img src={imagenOriginal} alt="preview"
-                  className="absolute w-full h-full object-cover transition-all"
+                  className="w-full h-full object-cover"
                   style={{objectPosition: crop === 'top' ? 'top' : crop === 'bottom' ? 'bottom' : 'center'}} />
               </div>
               <div className="p-5 space-y-4">
