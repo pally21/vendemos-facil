@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import Cropper from 'react-easy-crop';
 import { LogOut, Plus, Store, ShoppingBag, Send, X, Eye, Lock, ChevronRight, Truck, Star, Users, Zap, Crown, Camera, ImagePlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -397,7 +398,7 @@ function TiendaPublica({ slug }) {
                     {/* Foto */}
                     <div className="h-52 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center">
                       {p.imagen
-                        ? <img src={p.imagen} alt={p.nombre} className="absolute inset-0 w-full h-full object-cover" />
+                        ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" style={{objectPosition: p.imagen_posicion || 'center'}} />
                         : <Camera className="w-10 h-10 text-gray-300" />}
                     </div>
 
@@ -810,10 +811,15 @@ export default function VendeFacilChile() {
   const [successMsg, setSuccessMsg] = useState('');
 
   const [formTienda, setFormTienda] = useState({ nombre: '', descripcion: '', telefono: '', delivery_costo: '' });
-  const [formProducto, setFormProducto] = useState({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual' });
+  const [formProducto, setFormProducto] = useState({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center' });
   const [imagenFile, setImagenFile] = useState(null);
   const [imagenPreview, setImagenPreview] = useState(null);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
+  const [imagenOriginal, setImagenOriginal] = useState(null);
+  const [mostrarCrop, setMostrarCrop] = useState(false);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [resetEmail, setResetEmail] = useState('');
   const [mostrarModalPlanes, setMostrarModalPlanes] = useState(false);
@@ -929,12 +935,43 @@ export default function VendeFacilChile() {
     finally { setLoading(false); }
   };
 
+  const getCroppedImg = async (imageSrc, pixelCrop) => {
+    const image = new Image();
+    image.src = imageSrc;
+    await new Promise(resolve => { image.onload = resolve; });
+    const canvas = document.createElement('canvas');
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(image, pixelCrop.x, pixelCrop.y, pixelCrop.width, pixelCrop.height, 0, 0, pixelCrop.width, pixelCrop.height);
+    return new Promise(resolve => canvas.toBlob(blob => resolve(blob), 'image/jpeg', 0.9));
+  };
+
+  const onCropComplete = useCallback((_, croppedPixels) => {
+    setCroppedAreaPixels(croppedPixels);
+  }, []);
+
+  const handleConfirmarCrop = async () => {
+    try {
+      const blob = await getCroppedImg(imagenOriginal, croppedAreaPixels);
+      const file = new File([blob], 'producto.jpg', { type: 'image/jpeg' });
+      setImagenFile(file);
+      setImagenPreview(URL.createObjectURL(blob));
+      setMostrarCrop(false);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleImagenChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     if (file.size > 5 * 1024 * 1024) { setError('La foto no puede superar 5MB'); return; }
-    setImagenFile(file);
-    setImagenPreview(URL.createObjectURL(file));
+    const url = URL.createObjectURL(file);
+    setImagenOriginal(url);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setMostrarCrop(true);
     setError('');
   };
 
@@ -972,11 +1009,12 @@ export default function VendeFacilChile() {
         descripcion: formProducto.descripcion,
         imagen: imagenUrl,
         tipo_venta: formProducto.tipo_venta,
+        imagen_posicion: formProducto.imagen_posicion || 'center',
         tienda_id: miTienda.id,
       }]).select().single();
       if (error) { setError(error.message); return; }
       setProductos(prev => [...prev, data]);
-      setFormProducto({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual' });
+      setFormProducto({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center' });
       setImagenFile(null);
       setImagenPreview(null);
       setSuccessMsg('¡Producto agregado! ✅');
@@ -1418,6 +1456,43 @@ export default function VendeFacilChile() {
     return (
       <div className="min-h-screen bg-gray-50 font-['DM_Sans']">
         <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&family=Fraunces:wght@700;900&display=swap');`}</style>
+        {mostrarCrop && imagenOriginal && (
+          <div className="fixed inset-0 z-50 bg-black/80 flex flex-col items-center justify-center p-4">
+            <div className="bg-white rounded-3xl overflow-hidden w-full max-w-lg">
+              <div className="bg-gradient-to-r from-[#16a34a] to-[#ea580c] p-4 text-white text-center">
+                <h3 className="font-black text-lg">Encuadra tu foto</h3>
+                <p className="text-green-100 text-sm">Arrastra para mover · Pellizca para hacer zoom</p>
+              </div>
+              <div className="relative" style={{height: '300px', background: '#111'}}>
+                <Cropper
+                  image={imagenOriginal}
+                  crop={crop}
+                  zoom={zoom}
+                  aspect={4/3}
+                  onCropChange={setCrop}
+                  onZoomChange={setZoom}
+                  onCropComplete={onCropComplete}
+                />
+              </div>
+              <div className="p-4 space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-600 mb-1 block">Zoom</label>
+                  <input type="range" min={1} max={3} step={0.01} value={zoom}
+                    onChange={e => setZoom(Number(e.target.value))}
+                    className="w-full accent-green-600" />
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={() => setMostrarCrop(false)} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50">
+                    Cancelar
+                  </button>
+                  <button onClick={handleConfirmarCrop} className="flex-1 py-3 bg-[#16a34a] hover:bg-[#ea580c] text-white rounded-xl font-black transition">
+                    ✓ Usar esta foto
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {mostrarModalPlanes && <ModalPlanes onCerrar={() => setMostrarModalPlanes(false)} productoCount={productos.length} miTienda={miTienda} userEmail={user?.email} />}
         {editandoProducto && (
           <ModalEditarProducto
@@ -1662,9 +1737,9 @@ export default function VendeFacilChile() {
                     {productos.map(p => (
                       <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group">
                         {/* Foto con botón eliminar encima */}
-                        <div className="h-40 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 relative" style={{position:"relative"}}>
+                        <div className="h-40 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center relative" style={{aspectRatio:"4/3"}}>
                           {p.imagen
-                            ? <img src={p.imagen} alt={p.nombre} className="absolute inset-0 w-full h-full object-cover" />
+                            ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-contain p-2" />
                             : <Camera className="w-10 h-10 text-gray-300" />}
                           <button
                             onClick={() => handleEliminarProducto(p.id, p.imagen)}
