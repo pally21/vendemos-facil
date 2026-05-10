@@ -1664,7 +1664,7 @@ export default function VendeFacilChile() {
                         {/* Foto con botón eliminar encima */}
                         <div className="h-40 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center relative" style={{aspectRatio:"4/3"}}>
                           {p.imagen
-                            ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-contain p-2" />
+                            ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" />
                             : <Camera className="w-10 h-10 text-gray-300" />}
                           <button
                             onClick={() => handleEliminarProducto(p.id, p.imagen)}
