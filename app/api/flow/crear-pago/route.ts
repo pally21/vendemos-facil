@@ -15,21 +15,24 @@ export async function POST(req: NextRequest) {
   try {
     const { plan, tiendaId, email } = await req.json();
 
-    const monto = plan === 'pro' ? 11888 : 23788; // con IVA
-    const comercialId = `${tiendaId}-${plan}-${Date.now()}`;
+    const monto = plan === 'pro' ? 11888 : 23788;
+    const comercialId = `vm-${Date.now()}`;
+    const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://www.vendemosfacil.cl';
 
     const params: Record<string, string> = {
       apiKey: API_KEY,
       amount: String(monto),
       commerceOrder: comercialId,
       currency: 'CLP',
-      email,
-      subject: plan === 'pro' ? 'Plan Pro - Vendemos Fácil' : 'Plan Full - Vendemos Fácil',
-      urlConfirmation: `${process.env.NEXT_PUBLIC_URL}/api/flow/confirmar`,
-      urlReturn: `${process.env.NEXT_PUBLIC_URL}/pago-exitoso?plan=${plan}&tiendaId=${tiendaId}`,
+      email: email,
+      subject: plan === 'pro' ? 'Plan Pro Vendemos Facil' : 'Plan Full Vendemos Facil',
+      urlConfirmation: `${baseUrl}/api/flow/confirmar`,
+      urlReturn: `${baseUrl}/pago-exitoso?plan=${plan}&tiendaId=${tiendaId}`,
     };
 
     params.s = firmar(params);
+
+    console.log('Flow params:', JSON.stringify(params));
 
     const formData = new URLSearchParams(params);
     const response = await fetch(`${FLOW_API_URL}/payment/create`, {
@@ -39,6 +42,7 @@ export async function POST(req: NextRequest) {
     });
 
     const data = await response.json();
+    console.log('Flow response:', JSON.stringify(data));
 
     if (data.url && data.token) {
       return NextResponse.json({ url: `${data.url}?token=${data.token}` });
@@ -46,6 +50,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ error: 'Error al crear pago', detail: data }, { status: 400 });
   } catch (error) {
-    return NextResponse.json({ error: 'Error interno' }, { status: 500 });
+    console.error('Error:', error);
+    return NextResponse.json({ error: 'Error interno', detail: String(error) }, { status: 500 });
   }
 }
