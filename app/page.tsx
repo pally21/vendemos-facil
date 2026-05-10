@@ -1662,7 +1662,7 @@ export default function VendeFacilChile() {
                     {productos.map(p => (
                       <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition group">
                         {/* Foto con botón eliminar encima */}
-                        <div className="h-40 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center relative" style={{aspectRatio:"4/3"}}>
+                        <div className="h-40 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 relative">
                           {p.imagen
                             ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" />
                             : <Camera className="w-10 h-10 text-gray-300" />}
