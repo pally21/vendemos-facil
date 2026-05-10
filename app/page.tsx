@@ -207,7 +207,7 @@ function TiendaPublica({ slug }) {
                   <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-green-100 overflow-hidden hover:shadow-md transition-all">
                     <div className="h-48 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center">
                       {p.imagen
-                        ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" />
+                        ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" style={{objectPosition: p.imagen_posicion || 'center'}} />
                         : <Camera className="w-10 h-10 text-gray-300" />}
                     </div>
                     <div className="p-5">
@@ -251,7 +251,7 @@ function TiendaPublica({ slug }) {
                     <div key={i.id} className="flex items-center gap-3 border-b border-gray-50 pb-3">
                       <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 shrink-0 flex items-center justify-center">
                         {i.imagen
-                          ? <img src={i.imagen} alt={i.nombre} className="w-full h-full object-cover" />
+                          ? <img src={i.imagen} alt={i.nombre} className="w-full h-full object-cover" style={{objectPosition: p.imagen_posicion || 'center'}} />
                           : <ShoppingBag className="w-5 h-5 text-gray-400" />}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -402,7 +402,7 @@ export default function VendeFacilChile() {
   const [successMsg, setSuccessMsg] = useState('');
 
   const [formTienda, setFormTienda] = useState({ nombre: '', descripcion: '', telefono: '' });
-  const [formProducto, setFormProducto] = useState({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual' });
+  const [formProducto, setFormProducto] = useState({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center' });
   const [imagenFile, setImagenFile] = useState(null);
   const [imagenPreview, setImagenPreview] = useState(null);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
@@ -1065,7 +1065,7 @@ export default function VendeFacilChile() {
                       <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition">
                         <div className="h-40 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center">
                           {p.imagen
-                            ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" />
+                            ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" style={{objectPosition: p.imagen_posicion || 'center'}} />
                             : <Camera className="w-10 h-10 text-gray-300" />}
                         </div>
                         <div className="p-5">
