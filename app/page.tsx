@@ -120,48 +120,67 @@ function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }) 
 }
 
 // ─── MODAL PLANES ────────────────────────────────────────────────────────────
-function ModalPlanes({ onCerrar, productoCount }) {
-  const msgPro = encodeURIComponent('¡Hola! Quiero el Plan Pro de Vendemos Fácil ($9.990/mes + IVA, hasta 20 fotos) 🛒');
-  const msgFull = encodeURIComponent('¡Hola! Quiero el Plan Full de Vendemos Fácil ($19.990/mes + IVA, fotos ilimitadas) 🚀');
+function ModalPlanes({ onCerrar, productoCount, miTienda, userEmail }: any) {
+  const [pagando, setPagando] = useState<string | null>(null);
+  const [errorPago, setErrorPago] = useState('');
+
+  const handlePagar = async (plan: string) => {
+    if (!miTienda?.id || !userEmail) { setErrorPago('Error: no se pudo identificar tu tienda'); return; }
+    setPagando(plan);
+    setErrorPago('');
+    try {
+      const res = await fetch('/api/flow/crear-pago', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan, tiendaId: miTienda.id, email: userEmail }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setErrorPago('Error al conectar con Flow. Intenta de nuevo.');
+      }
+    } catch {
+      setErrorPago('Error al procesar el pago.');
+    } finally {
+      setPagando(null);
+    }
+  };
 
   const planes = [
     {
       nombre: 'Gratis',
       precio: '$0',
       periodo: 'siempre',
-      limite: '5 productos',
+      limite: '1 a 5 fotos',
       features: ['5 fotos de productos', 'Catálogo online', 'Pedidos por WhatsApp'],
-      actual: true,
       color: 'gray',
-      msg: null,
+      pagar: false,
     },
     {
       nombre: 'Pro',
-      precio: '$9.990',
+      precio: '$9.990 + IVA',
       periodo: '/mes',
       limite: 'Hasta 20 fotos',
-      features: ['De 6 a 20 fotos de productos', 'Catálogo online', 'Pedidos por WhatsApp', 'Soporte prioritario', 'IVA incluido'],
-      precio: '$9.990 + IVA',
+      features: ['De 6 a 20 fotos', 'Catálogo online', 'Pedidos por WhatsApp', 'Soporte prioritario'],
       recomendado: true,
       color: 'green',
-      msg: msgPro,
+      pagar: true,
     },
     {
       nombre: 'Full',
-      precio: '$19.990',
+      precio: '$19.990 + IVA',
       periodo: '/mes',
       limite: 'Fotos ilimitadas',
-      features: ['Fotos ilimitadas', 'Catálogo online', 'Pedidos por WhatsApp', 'Soporte prioritario', 'Acceso completo', 'IVA incluido'],
-      precio: '$19.990 + IVA',
+      features: ['Fotos ilimitadas', 'Catálogo online', 'Pedidos por WhatsApp', 'Soporte prioritario', 'Acceso completo'],
       color: 'orange',
-      msg: msgFull,
+      pagar: true,
     },
   ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden my-4">
-        {/* Header */}
         <div className="bg-gradient-to-r from-[#16a34a] to-[#ea580c] p-8 text-white text-center relative">
           <button onClick={onCerrar} className="absolute top-4 right-4 w-8 h-8 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition">
             <X className="w-4 h-4" />
@@ -170,10 +189,9 @@ function ModalPlanes({ onCerrar, productoCount }) {
             <Crown className="w-7 h-7 text-yellow-900" />
           </div>
           <h2 className="text-2xl font-black font-['Fraunces']">¡Alcanzaste el límite!</h2>
-          <p className="text-green-100 mt-2">Tienes {productoCount} de 5 productos del plan gratis. Elige un plan para seguir creciendo.</p>
+          <p className="text-green-100 mt-2">Tienes {productoCount} fotos del plan gratis. Elige un plan para seguir creciendo.</p>
         </div>
 
-        {/* Planes */}
         <div className="p-6 grid sm:grid-cols-3 gap-4">
           {planes.map(plan => (
             <div key={plan.nombre} className={`rounded-2xl border-2 p-5 flex flex-col relative ${
@@ -190,7 +208,7 @@ function ModalPlanes({ onCerrar, productoCount }) {
                 {plan.nombre}
               </p>
               <div className="mt-2 mb-1">
-                <span className={`text-3xl font-black ${plan.color === 'green' ? 'text-[#16a34a]' : plan.color === 'orange' ? 'text-orange-600' : 'text-gray-400'}`}>
+                <span className={`text-xl font-black ${plan.color === 'green' ? 'text-[#16a34a]' : plan.color === 'orange' ? 'text-orange-600' : 'text-gray-400'}`}>
                   {plan.precio}
                 </span>
                 <span className="text-xs text-gray-500 ml-1">{plan.periodo}</span>
@@ -203,19 +221,18 @@ function ModalPlanes({ onCerrar, productoCount }) {
                   </li>
                 ))}
               </ul>
-              {plan.msg ? (
-                <a
-                  href={`https://wa.me/${WHATSAPP_CONTACTO}?text=${plan.msg}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`w-full py-2.5 rounded-xl font-black text-sm text-center flex items-center justify-center gap-1.5 transition ${
+              {plan.pagar ? (
+                <button
+                  onClick={() => handlePagar(plan.nombre.toLowerCase())}
+                  disabled={pagando === plan.nombre.toLowerCase()}
+                  className={`w-full py-2.5 rounded-xl font-black text-sm flex items-center justify-center gap-1.5 transition disabled:opacity-50 ${
                     plan.color === 'green'
-                      ? 'bg-[#16a34a] hover:bg-[#ea580c] text-white shadow-lg shadow-green-200'
-                      : 'bg-orange-500 hover:bg-orange-600 text-white shadow-lg shadow-orange-200'
+                      ? 'bg-[#16a34a] hover:bg-[#ea580c] text-white'
+                      : 'bg-orange-500 hover:bg-orange-600 text-white'
                   }`}
                 >
-                  <Send className="w-3.5 h-3.5" /> Contratar
-                </a>
+                  {pagando === plan.nombre.toLowerCase() ? 'Redirigiendo...' : '💳 Pagar con Flow'}
+                </button>
               ) : (
                 <div className="w-full py-2.5 rounded-xl font-black text-sm text-center bg-gray-200 text-gray-500">
                   Plan actual
@@ -226,8 +243,9 @@ function ModalPlanes({ onCerrar, productoCount }) {
         </div>
 
         <div className="px-6 pb-6">
+          {errorPago && <p className="text-red-500 text-xs text-center mb-3">{errorPago}</p>}
           <button onClick={onCerrar} className="w-full text-sm text-gray-400 hover:text-gray-600 py-2">
-            Ahora no, seguir con 5 productos
+            Ahora no, seguir con 5 fotos
           </button>
         </div>
       </div>
@@ -923,7 +941,12 @@ export default function VendeFacilChile() {
   const handleAgregarProducto = async (e) => {
     e.preventDefault();
     setError('');
-    if (!miTienda?.is_admin && productos.length >= LIMITE_GRATIS) {
+    const limiteActual = miTienda?.is_admin ? Infinity
+      : miTienda?.plan === 'full' ? Infinity
+      : miTienda?.plan === 'pro' ? LIMITE_PRO
+      : LIMITE_GRATIS;
+
+    if (productos.length >= limiteActual) {
       setMostrarModalPlanes(true);
       return;
     }
@@ -1070,7 +1093,7 @@ export default function VendeFacilChile() {
         <header className="sticky top-0 z-50 bg-white backdrop-blur-md border-b-2 border-orange-100 shadow-sm">
           <nav className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <img src="/logo-vende-facil-nuevo.svg" alt="Vendemos Fácil" className="h-14 w-14 object-contain" onError={e => { e.currentTarget.src='/logo.jpeg'; }} />
+              <img src="/logo.svg" alt="Vendemos Fácil" className="h-12 w-12 object-contain" onError={e => { e.currentTarget.src='/logo.jpeg'; }} />
               <span className="text-xl font-black text-[#16a34a] font-['Fraunces']">Vendemos Fácil</span>
             </div>
             <div className="flex gap-3">
@@ -1395,7 +1418,7 @@ export default function VendeFacilChile() {
     return (
       <div className="min-h-screen bg-gray-50 font-['DM_Sans']">
         <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;700;900&family=Fraunces:wght@700;900&display=swap');`}</style>
-        {mostrarModalPlanes && <ModalPlanes onCerrar={() => setMostrarModalPlanes(false)} productoCount={productos.length} />}
+        {mostrarModalPlanes && <ModalPlanes onCerrar={() => setMostrarModalPlanes(false)} productoCount={productos.length} miTienda={miTienda} userEmail={user?.email} />}
         {editandoProducto && (
           <ModalEditarProducto
             producto={editandoProducto}
@@ -1409,7 +1432,7 @@ export default function VendeFacilChile() {
         <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
           <nav className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
             <div className="flex items-center gap-2">
-              <img src="/logo-vende-facil-nuevo.svg" alt="Vendemos Fácil" className="h-12 w-12 object-contain" onError={e => { e.target.style.display='none'; }} />
+              <img src="/logo.svg" alt="Vendemos Fácil" className="h-10 w-10 object-contain" onError={e => { e.target.style.display='none'; }} />
               <span className="text-lg font-black text-[#16a34a] font-['Fraunces']">Vendemos Fácil</span>
             </div>
             <div className="flex gap-3 items-center">
