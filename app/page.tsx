@@ -1,7 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import Cropper from 'react-easy-crop';
+import dynamic from 'next/dynamic';
+const Cropper = dynamic(() => import('react-easy-crop'), { ssr: false });
+
 import { LogOut, Plus, Store, ShoppingBag, Send, X, Eye, Lock, ChevronRight, Truck, Star, Users, Zap, Crown, Camera, ImagePlus } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
