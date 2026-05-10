@@ -52,7 +52,7 @@ function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }) 
             <label className="block text-sm font-bold text-gray-700 mb-1.5">Foto</label>
             <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#16a34a] transition overflow-hidden" style={{minHeight:'120px'}}>
               {form.imagenPreview
-                ? <img src={form.imagenPreview} alt="preview" className="w-full h-36 object-cover" />
+                ? <img src={form.imagenPreview} alt="preview" className="w-full h-36 object-cover" style={{height:"160px",objectFit:"cover",width:"100%"}} />
                 : <div className="flex flex-col items-center py-6 gap-2"><ImagePlus className="w-8 h-8 text-gray-400" /><p className="text-sm text-gray-500">Cambiar foto</p></div>
               }
               <input type="file" accept="image/*" onChange={handleFoto} className="hidden" />
@@ -1616,7 +1616,7 @@ export default function VendeFacilChile() {
                       <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#16a34a] hover:bg-green-50 transition overflow-hidden" style={{minHeight:'120px'}}>
                         {imagenPreview ? (
                           <div className="relative w-full">
-                            <img src={imagenPreview} alt="preview" className="w-full h-36 object-cover" />
+                            <img src={imagenPreview} alt="preview" className="w-full h-36 object-cover" style={{height:"160px",objectFit:"cover",width:"100%"}} />
                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition">
                               <p className="text-white text-xs font-bold">Cambiar foto</p>
                             </div>
