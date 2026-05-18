@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingBag, Send, X, Truck, Camera } from 'lucide-react';
+import { ShoppingBag, Send, Truck, Camera } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 const ETIQUETAS_VENTA = {
@@ -12,6 +12,7 @@ const ETIQUETAS_VENTA = {
   bolsa:      '🛍️ Precio por bolsa',
 };
 
+
 // ─── TIENDA PÚBLICA (vista del comprador) ───────────────────────────────────
 function TiendaPublica({ slug }) {
   const [tienda, setTienda] = useState(null);
@@ -21,6 +22,7 @@ function TiendaPublica({ slug }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pedidoEnviado, setPedidoEnviado] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   useEffect(() => {
     const cargar = async () => {
@@ -41,18 +43,35 @@ function TiendaPublica({ slug }) {
   }, [slug]);
 
   const agregarAlCarrito = (producto) => {
+    setError('');
+    if (typeof producto.stock === 'number' && producto.stock <= 0) {
+      setError('Este producto está agotado.');
+      return;
+    }
     setCarrito(prev => {
       const existe = prev.find(i => i.id === producto.id);
-      if (existe) return prev.map(i => i.id === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i);
+      if (existe) {
+        const nuevaCantidad = existe.cantidad + 1;
+        if (typeof producto.stock === 'number' && nuevaCantidad > producto.stock) {
+          setError(`Solo quedan ${producto.stock} unidades de ${producto.nombre}`);
+          return prev;
+        }
+        return prev.map(i => i.id === producto.id ? { ...i, cantidad: nuevaCantidad } : i);
+      }
       return [...prev, { ...producto, cantidad: 1 }];
     });
   };
 
   const cambiarCantidad = (id, delta) => {
+    setError('');
     setCarrito(prev => {
       const item = prev.find(i => i.id === id);
       if (!item) return prev;
       const nuevaCantidad = item.cantidad + delta;
+      if (typeof item.stock === 'number' && nuevaCantidad > item.stock) {
+        setError(`Solo quedan ${item.stock} unidades de ${item.nombre}`);
+        return prev;
+      }
       if (nuevaCantidad <= 0) return prev.filter(i => i.id !== id);
       return prev.map(i => i.id === id ? { ...i, cantidad: nuevaCantidad } : i);
     });
@@ -60,49 +79,18 @@ function TiendaPublica({ slug }) {
 
   const subtotal = carrito.reduce((t, i) => t + i.precio * i.cantidad, 0);
   const costoDelivery = tienda?.delivery_costo || 0;
-  const delivery = subtotal > 0 && costoDelivery > 0 ? costoDelivery : 0;
+  let deliveryBase = 0;
+  if (formCompra.diaDespacho !== 'otro' && subtotal > 0 && costoDelivery > 0) {
+    deliveryBase = costoDelivery;
+  }
   const recargoDia = formCompra.diaDespacho === 'otro' ? 1000 : 0;
-  const total = subtotal + delivery + recargoDia;
+  const deliveryTotal = deliveryBase + recargoDia;
+  const total = subtotal + deliveryTotal;
+  const rescataProductos = productos.filter(p => p.rescata);
+  const otrosProductos = productos.filter(p => !p.rescata);
+  const productosMostrar = rescataProductos.length > 0 ? otrosProductos : productos;
 
-  const enviarPedido = () => {
-    setError('');
-    if (!formCompra.nombre.trim() || !formCompra.direccion.trim()) {
-      setError('Por favor completa tu nombre y dirección');
-      return;
-    }
-    if (formCompra.diaDespacho === 'otro' && !formCompra.otroDia.trim()) {
-      setError('Por favor indica qué día quieres el despacho');
-      return;
-    }
-    if (carrito.length === 0) {
-      setError('Agrega al menos un producto');
-      return;
-    }
-
-    const diaTexto = formCompra.diaDespacho === 'sabado' ? 'Sábado'
-      : formCompra.diaDespacho === 'miercoles' ? 'Miércoles'
-      : `Otro día: ${formCompra.otroDia}`;
-    let msg = `*🛒 Nuevo Pedido — ${tienda.nombre}*\n\n`;
-    msg += `👤 *Cliente:* ${formCompra.nombre}\n`;
-    if (formCompra.telefono) msg += `📱 *Teléfono:* ${formCompra.telefono}\n`;
-    msg += `📍 *Dirección:* ${formCompra.direccion}\n`;
-    msg += `📅 *Día de Despacho:* ${diaTexto}\n`;
-    msg += `💳 *Forma de pago:* ${formCompra.pago === 'efectivo' ? '💵 Efectivo' : '🏦 Transferencia'}\n\n`;
-    msg += `*Productos:*\n`;
-    carrito.forEach(i => {
-      msg += `• ${i.nombre} x${i.cantidad} → $${(i.precio * i.cantidad).toLocaleString('es-CL')}\n`;
-    });
-    msg += `\n💰 *Subtotal:* $${subtotal.toLocaleString('es-CL')}`;
-    if (delivery > 0) msg += `\n🚚 *Delivery:* $${delivery.toLocaleString('es-CL')}`;
-    else if (costoDelivery === 0) msg += `\n🚚 *Delivery:* ¡GRATIS!`;
-    else msg += `\n🚚 *Delivery:* ¡GRATIS!`;
-    if (recargoDia > 0) msg += `\n📅 *Recargo día especial:* $${recargoDia.toLocaleString('es-CL')}`;
-    msg += `\n\n✅ *TOTAL: $${total.toLocaleString('es-CL')}*`;
-
-    const tel = tienda.telefono?.replace(/\D/g, '');
-    window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
-    setPedidoEnviado(true);
-  };
+  const transferenciaDatos = tienda ? {
 
   if (loading) return (
     <div className="min-h-screen bg-[#f0faf4] flex items-center justify-center">
@@ -140,44 +128,82 @@ function TiendaPublica({ slug }) {
         {tienda.telefono && <p className="text-green-200 text-sm mt-3">📱 {tienda.telefono}</p>}
       </div>
 
+      {rescataProductos.length > 0 && (
+        <div className="max-w-6xl mx-auto px-4 pb-6">
+          <div className="bg-white rounded-3xl border border-orange-100 p-6 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-5">
+              <div>
+                <p className="text-sm uppercase font-black tracking-[0.2em] text-orange-500">Rescata</p>
+                <h2 className="text-3xl font-black text-gray-900">Productos rescata</h2>
+                <p className="text-gray-500 mt-1">Frutas, verduras o productos con precio especial porque están listos para vender.</p>
+              </div>
+              <span className="inline-flex items-center rounded-full bg-orange-100 text-orange-700 text-xs font-black px-3 py-2">Precios más bajos</span>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {rescataProductos.map(p => (
+                <div key={p.id} className="bg-orange-50 rounded-2xl border border-orange-200 p-4">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                      <p className="text-sm font-black text-orange-600">Rescata</p>
+                      <h3 className="text-lg font-black text-gray-900">{p.nombre}</h3>
+                    </div>
+                    <span className="text-sm font-black text-orange-700">${p.precio.toLocaleString('es-CL')}</span>
+                  </div>
+                  {p.descripcion && <p className="text-sm text-gray-600 mb-3">{p.descripcion}</p>}
+                  {typeof p.stock === 'number' && (
+                    <p className={`text-sm font-bold ${p.stock === 0 ? 'text-red-500' : 'text-gray-700'}`}>
+                      {p.stock === 0 ? 'Agotado' : `Stock: ${p.stock}`}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-6xl mx-auto px-4 py-10 grid lg:grid-cols-3 gap-8">
         {/* Catálogo */}
         <div className="lg:col-span-2">
           <h2 className="text-2xl font-black text-gray-800 mb-6 font-['Fraunces']">Catálogo</h2>
-          {productos.length === 0 ? (
+          {productosMostrar.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200">
               <p className="text-5xl mb-4">📦</p>
-              <p className="text-gray-400 font-medium">Esta tienda aún no tiene productos.</p>
+              <p className="text-gray-400 font-medium">No hay productos adicionales disponibles en esta categoría.</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 gap-5">
-              {productos.map(p => {
+              {productosMostrar.map(p => {
                 const enCarrito = carrito.find(i => i.id === p.id);
+                const outOfStock = typeof p.stock === 'number' && p.stock <= 0;
                 return (
                   <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-green-100 overflow-hidden hover:shadow-md transition-all">
-                    {/* Foto */}
-                    <div className="overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center" style={{aspectRatio:"4/3"}}>
+                    <div className="overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center" style={{aspectRatio:'4/3'}}>
                       {p.imagen
-                        ? <img src={p.imagen || ""} alt={p.nombre} className="w-full h-full object-cover" style={{display:"block"}} />
+                        ? <img src={p.imagen || ''} alt={p.nombre} className="w-full h-full object-cover" style={{display:'block'}} />
                         : <Camera className="w-10 h-10 text-gray-300" />}
                     </div>
-
                     <div className="p-5">
-                      {/* Nombre */}
-                      <h3 className="font-black text-gray-900 text-xl leading-tight">{p.nombre}</h3>
-
-                      {/* Descripción */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h3 className="font-black text-gray-900 text-xl leading-tight">{p.nombre}</h3>
+                          {p.rescata && (
+                            <span className="inline-flex items-center gap-1 mt-2 px-2 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-black">
+                              Rescata
+                            </span>
+                          )}
+                        </div>
+                        {typeof p.stock === 'number' && (
+                          <span className={`text-xs font-bold ${outOfStock ? 'text-red-500' : 'text-gray-600'}`}>
+                            {outOfStock ? 'Agotado' : `Stock: ${p.stock}`}
+                          </span>
+                        )}
+                      </div>
                       {p.descripcion && <p className="text-base text-gray-500 mt-1 leading-snug">{p.descripcion}</p>}
-
-                      {/* Tipo de venta — bien visible */}
                       <div className="mt-3 inline-flex items-center bg-green-50 border border-green-200 rounded-xl px-3 py-1.5">
                         <span className="text-sm font-bold text-green-700">{ETIQUETAS_VENTA[p.tipo_venta] || p.tipo_venta}</span>
                       </div>
-
-                      {/* Precio grande */}
                       <p className="text-3xl font-black text-[#16a34a] mt-3">${p.precio.toLocaleString('es-CL')}</p>
-
-                      {/* Botones cantidad / agregar */}
                       {enCarrito ? (
                         <div className="mt-4">
                           <p className="text-xs text-gray-400 font-medium mb-2 text-center">Cantidad seleccionada</p>
@@ -197,7 +223,8 @@ function TiendaPublica({ slug }) {
                             </div>
                             <button
                               onClick={() => cambiarCantidad(p.id, 1)}
-                              className="flex-1 h-14 bg-[#16a34a] hover:bg-[#15803d] active:bg-[#166534] text-white rounded-2xl font-black text-3xl transition select-none flex items-center justify-center"
+                              disabled={typeof p.stock === 'number' && enCarrito.cantidad >= p.stock}
+                              className={`flex-1 h-14 ${typeof p.stock === 'number' && enCarrito.cantidad >= p.stock ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#16a34a] hover:bg-[#15803d] active:bg-[#166534] text-white'} rounded-2xl font-black text-3xl transition select-none flex items-center justify-center`}
                               style={{touchAction:'manipulation'}}
                             >
                               +
@@ -210,10 +237,11 @@ function TiendaPublica({ slug }) {
                       ) : (
                         <button
                           onClick={() => agregarAlCarrito(p)}
-                          className="w-full mt-4 bg-[#16a34a] hover:bg-[#15803d] active:bg-[#166534] text-white py-4 rounded-2xl font-black text-lg transition flex items-center justify-center gap-2 select-none"
+                          disabled={outOfStock}
+                          className={`w-full mt-4 ${outOfStock ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#16a34a] hover:bg-[#15803d] active:bg-[#166534] text-white'} py-4 rounded-2xl font-black text-lg transition flex items-center justify-center gap-2 select-none`}
                           style={{touchAction:'manipulation'}}
                         >
-                          <ShoppingBag className="w-5 h-5" /> Agregar al pedido
+                          <ShoppingBag className="w-5 h-5" /> {outOfStock ? 'Agotado' : 'Agregar al pedido'}
                         </button>
                       )}
                     </div>
@@ -260,17 +288,14 @@ function TiendaPublica({ slug }) {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="flex items-center gap-1 text-gray-600"><Truck className="w-3 h-3" /> Delivery</span>
-                    {delivery === 0
+                    {deliveryTotal === 0
                       ? <span className="text-[#16a34a] font-bold">¡GRATIS!</span>
-                      : <span className="text-orange-500 font-bold">+${delivery.toLocaleString('es-CL')}</span>
+                      : <span className="text-orange-500 font-bold">+${deliveryTotal.toLocaleString('es-CL')}</span>
                     }
                   </div>
-                  {delivery > 0 && subtotal < 10000 && (
-                    <p className="text-xs text-orange-400">💡 Agrega ${(10000 - subtotal).toLocaleString('es-CL')} más para envío gratis</p>
-                  )}
                   {recargoDia > 0 && (
                     <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">🗓️ Día especial</span>
+                      <span className="text-gray-600">🗓️ Cargo por otro día</span>
                       <span className="text-orange-500 font-bold">+$1.000</span>
                     </div>
                   )}
@@ -324,9 +349,9 @@ function TiendaPublica({ slug }) {
                     <label className="block text-xs font-black text-gray-600 mb-2 uppercase tracking-wide">📅 Día de despacho</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { val: 'sabado',    emoji: '📅', label: 'Sábado',     sub: 'Sin recargo' },
-                        { val: 'miercoles', emoji: '📅', label: 'Miércoles',  sub: 'Sin recargo' },
-                        { val: 'otro',      emoji: '🗓️', label: 'Otro día',   sub: '+$1.000' },
+                        { val: 'sabado', emoji: '📅', label: 'Sábado', sub: 'Sin recargo' },
+                        { val: 'martes', emoji: '📅', label: 'Martes', sub: 'Sin recargo' },
+                        { val: 'otro',   emoji: '🗓️', label: 'Otro día', sub: '+$1.000' },
                       ].map(op => (
                         <button
                           key={op.val}
@@ -379,6 +404,20 @@ function TiendaPublica({ slug }) {
                     </div>
                   </div>
 
+                  {formCompra.pago === 'transferencia' && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-700">
+                      <p className="font-black mb-2">Datos para transferencia</p>
+                      <div className="space-y-1">
+                        <p><span className="font-bold">Banco:</span> {transferenciaDatos.banco}</p>
+                        <p><span className="font-bold">Tipo de cuenta:</span> {transferenciaDatos.tipo}</p>
+                        <p><span className="font-bold">Cuenta:</span> {transferenciaDatos.numero}</p>
+                        <p><span className="font-bold">Titular:</span> {transferenciaDatos.titular}</p>
+                        <p><span className="font-bold">RUT:</span> {transferenciaDatos.rut}</p>
+                        <p><span className="font-bold">Correo:</span> {transferenciaDatos.correo}</p>
+                      </div>
+                    </div>
+                  )}
+
                 </div>
 
                 {error && <p className="text-red-500 text-xs mb-3 bg-red-50 rounded-lg p-2">{error}</p>}
@@ -386,9 +425,10 @@ function TiendaPublica({ slug }) {
 
                 <button
                   onClick={enviarPedido}
-                  className="w-full bg-[#25D366] hover:bg-[#22c55e] text-white py-3 rounded-xl font-black flex items-center justify-center gap-2 transition shadow-lg shadow-green-200"
+                  disabled={enviando}
+                  className={`w-full ${enviando ? 'bg-gray-300 text-gray-700 cursor-not-allowed' : 'bg-[#25D366] hover:bg-[#22c55e] text-white'} py-3 rounded-xl font-black flex items-center justify-center gap-2 transition shadow-lg shadow-green-200`}
                 >
-                  <Send className="w-4 h-4" /> Enviar por WhatsApp
+                  <Send className="w-4 h-4" /> {enviando ? 'Procesando...' : 'Enviar por WhatsApp'}
                 </button>
               </>
             )}

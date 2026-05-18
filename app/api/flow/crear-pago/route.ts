@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 
 const FLOW_API_URL = 'https://www.flow.cl/api';
-const API_KEY = process.env.FLOW_API_KEY!;
-const SECRET_KEY = process.env.FLOW_SECRET_KEY!;
+const API_KEY = process.env.FLOW_API_KEY ?? '';
+const SECRET_KEY = process.env.FLOW_SECRET_KEY ?? '';
 
 function firmar(params: Record<string, string>) {
   const keys = Object.keys(params).sort();
@@ -14,6 +14,10 @@ function firmar(params: Record<string, string>) {
 export async function POST(req: NextRequest) {
   try {
     const { plan, tiendaId, email } = await req.json();
+
+    if (!API_KEY || !SECRET_KEY) {
+      return NextResponse.json({ error: 'Falta configuración de Flow en servidor' }, { status: 500 });
+    }
 
     const monto = plan === 'pro' ? 11888 : 23788;
     const comercialId = `vm-${Date.now()}`;

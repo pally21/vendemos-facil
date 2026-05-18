@@ -3,13 +3,10 @@ import crypto from 'crypto';
 import { createClient } from '@supabase/supabase-js';
 
 const FLOW_API_URL = 'https://www.flow.cl/api';
-const API_KEY = process.env.FLOW_API_KEY!;
-const SECRET_KEY = process.env.FLOW_SECRET_KEY!;
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const API_KEY = process.env.FLOW_API_KEY ?? '';
+const SECRET_KEY = process.env.FLOW_SECRET_KEY ?? '';
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 
 function firmar(params: Record<string, string>) {
   const keys = Object.keys(params).sort();
@@ -36,6 +33,11 @@ export async function POST(req: NextRequest) {
     );
 
     const pago = await response.json();
+
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return NextResponse.json({ error: 'Falta configuración de Supabase en servidor' }, { status: 500 });
+    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // status 2 = pago exitoso en Flow
     if (pago.status === 2) {
