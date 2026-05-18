@@ -1760,6 +1760,7 @@ export default function VendeFacilChile() {
                     </div>
                   </div>
                   <button type="submit" disabled={loading} className="w-full bg-[#16a34a] text-white py-3 rounded-xl font-black hover:bg-[#15803d] transition disabled:opacity-50 shadow-lg shadow-green-100">
+                    {loading ? "Agregando..." : "+ Agregar producto"}
                     
                   </button>
                 </form>
