@@ -25,8 +25,6 @@ function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }) 
     descripcion: producto.descripcion || '',
     imagen: producto.imagen || '',
     tipo_venta: producto.tipo_venta || 'individual',
-    stock: producto.stock ?? '',
-    rescata: producto.rescata || false,
     imagenFile: null,
     imagenPreview: producto.imagen || '',
   });
@@ -54,7 +52,7 @@ function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }) 
             <label className="block text-sm font-bold text-gray-700 mb-1.5">Foto</label>
             <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#16a34a] transition overflow-hidden" style={{minHeight:'120px'}}>
               {form.imagenPreview
-                ? <img src={form.imagenPreview} alt="preview" className="w-full h-36 object-cover" style={{height:"160px",objectFit:"cover",width:"100%"}} />
+                ? <img src={form.imagenPreview} alt="preview" className="w-full h-36 object-cover" />
                 : <div className="flex flex-col items-center py-6 gap-2"><ImagePlus className="w-8 h-8 text-gray-400" /><p className="text-sm text-gray-500">Cambiar foto</p></div>
               }
               <input type="file" accept="image/*" onChange={handleFoto} className="hidden" />
@@ -102,27 +100,6 @@ function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }) 
               <option value="paquete">Por Paquete</option>
               <option value="bolsa">Por Bolsa</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1.5">Stock disponible</label>
-            <input
-              type="number"
-              min="0"
-              value={form.stock}
-              onChange={e => setForm(f => ({ ...f, stock: e.target.value }))}
-              className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#16a34a] focus:outline-none"
-              placeholder="Dejar vacío = sin límite"
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <input
-              id="rescata-edit-checkbox"
-              type="checkbox"
-              checked={form.rescata}
-              onChange={e => setForm(f => ({ ...f, rescata: e.target.checked }))}
-              className="h-5 w-5 rounded border-gray-300 text-[#16a34a] focus:ring-[#16a34a]"
-            />
-            <label htmlFor="rescata-edit-checkbox" className="text-sm font-bold text-gray-700">Producto Rescata</label>
           </div>
           <div className="flex gap-3 pt-2">
             <button onClick={onCerrar} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition">
@@ -286,8 +263,6 @@ function TiendaPublica({ slug }) {
   const [error, setError] = useState('');
   const [pedidoEnviado, setPedidoEnviado] = useState(false);
 
-  const rescataProductos = productos.filter(p => p.rescata);
-
   useEffect(() => {
     const cargar = async () => {
       try {
@@ -307,35 +282,29 @@ function TiendaPublica({ slug }) {
   }, [slug]);
 
   const agregarAlCarrito = (producto) => {
-    const stock = typeof producto.stock === 'number' ? producto.stock : null;
-    const enCarrito = carrito.find(i => i.id === producto.id);
-    if (stock !== null && stock <= 0) return;
-    if (enCarrito) {
-      if (stock !== null && enCarrito.cantidad >= stock) return;
-      setCarrito(prev => prev.map(i => i.id === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i));
-      return;
-    }
-    setCarrito(prev => [...prev, { ...producto, cantidad: 1 }]);
+    setCarrito(prev => {
+      const existe = prev.find(i => i.id === producto.id);
+      if (existe) return prev.map(i => i.id === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i);
+      return [...prev, { ...producto, cantidad: 1 }];
+    });
   };
 
   const cambiarCantidad = (id, delta) => {
     setCarrito(prev => {
       const item = prev.find(i => i.id === id);
       if (!item) return prev;
-      const producto = productos.find(p => p.id === id);
-      const stock = producto?.stock != null ? Number(producto.stock) : null;
       const nuevaCantidad = item.cantidad + delta;
-      if (stock !== null && nuevaCantidad > stock) return prev;
       if (nuevaCantidad <= 0) return prev.filter(i => i.id !== id);
       return prev.map(i => i.id === id ? { ...i, cantidad: nuevaCantidad } : i);
     });
   };
 
   const subtotal = carrito.reduce((t, i) => t + i.precio * i.cantidad, 0);
-  const delivery = formCompra.diaDespacho === 'otro' ? 1000 : 0;
-  const total = subtotal + delivery;
+  const delivery = subtotal > 0 && subtotal < 10000 ? 1000 : 0;
+  const recargoDia = formCompra.diaDespacho === 'otro' ? 1000 : 0;
+  const total = subtotal + delivery + recargoDia;
 
-  const enviarPedido = async () => {
+  const enviarPedido = () => {
     setError('');
     if (!formCompra.nombre.trim() || !formCompra.direccion.trim()) {
       setError('Por favor completa tu nombre y dirección');
@@ -351,50 +320,26 @@ function TiendaPublica({ slug }) {
     }
 
     const diaTexto = formCompra.diaDespacho === 'sabado' ? 'Sábado'
-      : formCompra.diaDespacho === 'martes' ? 'Martes'
+      : formCompra.diaDespacho === 'miercoles' ? 'Miércoles'
       : `Otro día: ${formCompra.otroDia}`;
     let msg = `*🛒 Nuevo Pedido — ${tienda.nombre}*\n\n`;
     msg += `👤 *Cliente:* ${formCompra.nombre}\n`;
     if (formCompra.telefono) msg += `📱 *Teléfono:* ${formCompra.telefono}\n`;
     msg += `📍 *Dirección:* ${formCompra.direccion}\n`;
     msg += `📅 *Día de Despacho:* ${diaTexto}\n`;
-    msg += `💳 *Forma de pago:* ${formCompra.pago === 'efectivo' ? '💵 Efectivo' : '🏦 Transferencia'}\n`;
-    if (formCompra.pago === 'transferencia') {
-      msg += `\n🏦 *Datos transferencia:*\n`;
-      if (tienda.transferencia_banco) msg += `• Banco: ${tienda.transferencia_banco}\n`;
-      if (tienda.transferencia_tipo) msg += `• Tipo de cuenta: ${tienda.transferencia_tipo}\n`;
-      if (tienda.transferencia_numero) msg += `• Nº de cuenta: ${tienda.transferencia_numero}\n`;
-      if (tienda.transferencia_titular) msg += `• Titular: ${tienda.transferencia_titular}\n`;
-      msg += `\n`;
-    }
-    msg += `\n*Productos:*\n`;
+    msg += `💳 *Forma de pago:* ${formCompra.pago === 'efectivo' ? '💵 Efectivo' : '🏦 Transferencia'}\n\n`;
+    msg += `*Productos:*\n`;
     carrito.forEach(i => {
       msg += `• ${i.nombre} x${i.cantidad} → $${(i.precio * i.cantidad).toLocaleString('es-CL')}\n`;
     });
     msg += `\n💰 *Subtotal:* $${subtotal.toLocaleString('es-CL')}`;
     if (delivery > 0) msg += `\n🚚 *Delivery:* $${delivery.toLocaleString('es-CL')}`;
     else msg += `\n🚚 *Delivery:* ¡GRATIS!`;
+    if (recargoDia > 0) msg += `\n📅 *Recargo día especial:* $${recargoDia.toLocaleString('es-CL')}`;
     msg += `\n\n✅ *TOTAL: $${total.toLocaleString('es-CL')}*`;
 
     const tel = tienda.telefono?.replace(/\D/g, '');
     window.open(`https://wa.me/${tel}?text=${encodeURIComponent(msg)}`, '_blank');
-
-    try {
-      await Promise.all(carrito.map(async item => {
-        if (typeof item.stock !== 'number') return;
-        const nuevoStock = Math.max(item.stock - item.cantidad, 0);
-        await supabase.from('productos').update({ stock: nuevoStock }).eq('id', item.id);
-      }));
-    } catch (err) {
-      console.warn('No se pudo actualizar el stock en Supabase', err);
-    }
-
-    setProductos(prev => prev.map(p => {
-      const item = carrito.find(i => i.id === p.id);
-      if (!item || typeof p.stock !== 'number') return p;
-      return { ...p, stock: Math.max(p.stock - item.cantidad, 0) };
-    }));
-    setCarrito([]);
     setPedidoEnviado(true);
   };
 
@@ -438,15 +383,6 @@ function TiendaPublica({ slug }) {
         {/* Catálogo */}
         <div className="lg:col-span-2">
           <h2 className="text-2xl font-black text-gray-800 mb-6 font-['Fraunces']">Catálogo</h2>
-          {rescataProductos.length > 0 && (
-            <div className="mb-6 rounded-3xl border border-orange-200 bg-orange-50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <p className="text-sm font-black text-orange-800 uppercase tracking-[0.2em]">RESCATA</p>
-                <p className="text-sm text-orange-700">Estos productos tienen precio especial para no perder stock.</p>
-              </div>
-              <div className="text-sm text-orange-700 font-bold">{rescataProductos.length} producto{rescataProductos.length > 1 ? 's' : ''} en rescata</div>
-            </div>
-          )}
           {productos.length === 0 ? (
             <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200">
               <p className="text-5xl mb-4">📦</p>
@@ -456,13 +392,12 @@ function TiendaPublica({ slug }) {
             <div className="grid sm:grid-cols-2 gap-5">
               {productos.map(p => {
                 const enCarrito = carrito.find(i => i.id === p.id);
-                const disponible = typeof p.stock === 'number' ? Math.max(p.stock - (enCarrito?.cantidad || 0), 0) : null;
                 return (
                   <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-green-100 overflow-hidden hover:shadow-md transition-all">
                     {/* Foto */}
                     <div className="h-52 overflow-hidden bg-gradient-to-br from-green-50 to-orange-50 flex items-center justify-center">
                       {p.imagen
-                        ? <img src={p.imagen || ""} alt={p.nombre} className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display="none"; }} />
+                        ? <img src={p.imagen} alt={p.nombre} className="w-full h-full object-cover" style={{objectPosition: p.imagen_posicion || 'center'}} />
                         : <Camera className="w-10 h-10 text-gray-300" />}
                     </div>
 
@@ -479,13 +414,7 @@ function TiendaPublica({ slug }) {
                       </div>
 
                       {/* Precio grande */}
-                      <div className="flex items-center gap-2 flex-wrap mt-3">
-                        <p className="text-3xl font-black text-[#16a34a]">${p.precio.toLocaleString('es-CL')}</p>
-                        {p.rescata && <span className="inline-flex rounded-full bg-orange-100 text-orange-700 px-3 py-1 text-xs font-black">RESCATA</span>}
-                      </div>
-                      {typeof p.stock === 'number' && (
-                        <p className="text-sm text-gray-500 mt-2">Stock disponible: {disponible}</p>
-                      )}
+                      <p className="text-3xl font-black text-[#16a34a] mt-3">${p.precio.toLocaleString('es-CL')}</p>
 
                       {/* Botones cantidad / agregar */}
                       {enCarrito ? (
@@ -520,11 +449,10 @@ function TiendaPublica({ slug }) {
                       ) : (
                         <button
                           onClick={() => agregarAlCarrito(p)}
-                          disabled={disponible === 0}
-                          className={`w-full mt-4 py-4 rounded-2xl font-black text-lg transition flex items-center justify-center gap-2 select-none ${disponible === 0 ? 'bg-gray-200 text-gray-500 cursor-not-allowed' : 'bg-[#16a34a] hover:bg-[#ea580c] active:bg-[#166534] text-white'}`}
+                          className="w-full mt-4 bg-[#16a34a] hover:bg-[#ea580c] active:bg-[#166534] text-white py-4 rounded-2xl font-black text-lg transition flex items-center justify-center gap-2 select-none"
                           style={{touchAction:'manipulation'}}
                         >
-                          <ShoppingBag className="w-5 h-5" /> {disponible === 0 ? 'Agotado' : 'Agregar al pedido'}
+                          <ShoppingBag className="w-5 h-5" /> Agregar al pedido
                         </button>
                       )}
                     </div>
@@ -576,8 +504,14 @@ function TiendaPublica({ slug }) {
                       : <span className="text-orange-500 font-bold">+$1.000</span>
                     }
                   </div>
-                  {delivery > 0 && (
-                    <p className="text-xs text-orange-400">💡 Este despacho fuera de martes/sábado tiene un cargo adicional de $1.000.</p>
+                  {delivery > 0 && subtotal < 10000 && (
+                    <p className="text-xs text-orange-400">💡 Agrega ${(10000 - subtotal).toLocaleString('es-CL')} más para envío gratis</p>
+                  )}
+                  {recargoDia > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">🗓️ Día especial</span>
+                      <span className="text-orange-500 font-bold">+$1.000</span>
+                    </div>
                   )}
                   <div className="border-t border-gray-200 pt-2 flex justify-between font-black text-xl">
                     <span>Total</span>
@@ -629,9 +563,9 @@ function TiendaPublica({ slug }) {
                     <label className="block text-xs font-black text-gray-600 mb-2 uppercase tracking-wide">📅 Día de despacho</label>
                     <div className="grid grid-cols-3 gap-2">
                       {[
-                        { val: 'sabado',    emoji: '📅', label: 'Sábado',    sub: 'Sin recargo' },
-                        { val: 'martes',   emoji: '📅', label: 'Martes',    sub: 'Sin recargo' },
-                        { val: 'otro',      emoji: '🗓️', label: 'Otro día',  sub: '+$1.000' },
+                        { val: 'sabado',    emoji: '📅', label: 'Sábado',     sub: 'Sin recargo' },
+                        { val: 'miercoles', emoji: '📅', label: 'Miércoles',  sub: 'Sin recargo' },
+                        { val: 'otro',      emoji: '🗓️', label: 'Otro día',   sub: '+$1.000' },
                       ].map(op => (
                         <button
                           key={op.val}
@@ -683,16 +617,7 @@ function TiendaPublica({ slug }) {
                       ))}
                     </div>
                   </div>
-                  {formCompra.pago === 'transferencia' && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4 text-sm text-blue-700 space-y-2">
-                      <p className="font-black text-blue-800">Datos para transferencia</p>
-                      <p><span className="font-bold">Banco:</span> {tienda.transferencia_banco || 'Pendiente de definir'}</p>
-                      <p><span className="font-bold">Tipo de cuenta:</span> {tienda.transferencia_tipo || 'Pendiente de definir'}</p>
-                      <p><span className="font-bold">Número de cuenta:</span> {tienda.transferencia_numero || 'Pendiente de definir'}</p>
-                      <p><span className="font-bold">Titular:</span> {tienda.transferencia_titular || 'Pendiente de definir'}</p>
-                      <p className="text-xs text-blue-600">Revisa estos datos antes de enviar tu pedido.</p>
-                    </div>
-                  )}
+
                 </div>
 
                 {error && <p className="text-red-500 text-xs mb-3 bg-red-50 rounded-lg p-2">{error}</p>}
@@ -799,10 +724,6 @@ function EditarTienda({ miTienda, setMiTienda, setSuccessMsg }: any) {
     descripcion: miTienda.descripcion || '',
     telefono: miTienda.telefono || '',
     delivery_costo: miTienda.delivery_costo || 0,
-    transferencia_banco: miTienda.transferencia_banco || '',
-    transferencia_tipo: miTienda.transferencia_tipo || '',
-    transferencia_numero: miTienda.transferencia_numero || '',
-    transferencia_titular: miTienda.transferencia_titular || '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -817,10 +738,6 @@ function EditarTienda({ miTienda, setMiTienda, setSuccessMsg }: any) {
           descripcion: form.descripcion,
           telefono: form.telefono,
           delivery_costo: parseInt(form.delivery_costo) || 0,
-          transferencia_banco: form.transferencia_banco,
-          transferencia_tipo: form.transferencia_tipo,
-          transferencia_numero: form.transferencia_numero,
-          transferencia_titular: form.transferencia_titular,
         })
         .eq('id', miTienda.id)
         .select()
@@ -869,26 +786,6 @@ function EditarTienda({ miTienda, setMiTienda, setSuccessMsg }: any) {
             className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#16a34a] focus:outline-none" placeholder="0 = gratis" />
           <p className="text-xs text-gray-400 mt-1">El comprador verá este costo al hacer su pedido</p>
         </div>
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1">Banco de transferencia</label>
-          <input type="text" value={form.transferencia_banco} onChange={e => setForm(f => ({...f, transferencia_banco: e.target.value}))}
-            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#16a34a] focus:outline-none" placeholder="Ej: Banco de Chile" />
-        </div>
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1">Tipo de cuenta</label>
-          <input type="text" value={form.transferencia_tipo} onChange={e => setForm(f => ({...f, transferencia_tipo: e.target.value}))}
-            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#16a34a] focus:outline-none" placeholder="Corriente / Vista" />
-        </div>
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1">Número de cuenta</label>
-          <input type="text" value={form.transferencia_numero} onChange={e => setForm(f => ({...f, transferencia_numero: e.target.value}))}
-            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#16a34a] focus:outline-none" placeholder="Ej: 1234567890" />
-        </div>
-        <div>
-          <label className="block text-sm font-bold text-gray-700 mb-1">Titular de la cuenta</label>
-          <input type="text" value={form.transferencia_titular} onChange={e => setForm(f => ({...f, transferencia_titular: e.target.value}))}
-            className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#16a34a] focus:outline-none" placeholder="Ej: Juan Pérez" />
-        </div>
         <div className="flex gap-3">
           <button onClick={() => setEditando(false)} className="flex-1 py-2.5 border-2 border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition text-sm">
             Cancelar
@@ -913,7 +810,7 @@ export default function VendeFacilChile() {
   const [successMsg, setSuccessMsg] = useState('');
 
   const [formTienda, setFormTienda] = useState({ nombre: '', descripcion: '', telefono: '', delivery_costo: '' });
-  const [formProducto, setFormProducto] = useState({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center', stock: '', rescata: false });
+  const [formProducto, setFormProducto] = useState({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center' });
   const [imagenFile, setImagenFile] = useState(null);
   const [imagenPreview, setImagenPreview] = useState(null);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
@@ -1069,7 +966,7 @@ export default function VendeFacilChile() {
         const { data: urlData } = supabase.storage.from('productos').getPublicUrl(fileName);
         imagenUrl = urlData.publicUrl;
       }
-      const productData = {
+      const { data, error } = await supabase.from('productos').insert([{
         nombre: formProducto.nombre,
         precio: parseFloat(formProducto.precio),
         descripcion: formProducto.descripcion,
@@ -1077,13 +974,10 @@ export default function VendeFacilChile() {
         tipo_venta: formProducto.tipo_venta,
         imagen_posicion: formProducto.imagen_posicion || 'center',
         tienda_id: miTienda.id,
-        rescata: formProducto.rescata,
-      };
-      if (formProducto.stock !== '') productData.stock = parseInt(formProducto.stock, 10);
-      const { data, error } = await supabase.from('productos').insert([productData]).select().single();
+      }]).select().single();
       if (error) { setError(error.message); return; }
       setProductos(prev => [...prev, data]);
-      setFormProducto({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center', stock: '', rescata: false });
+      setFormProducto({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center' });
       setImagenFile(null);
       setImagenPreview(null);
       setSuccessMsg('¡Producto agregado! ✅');
@@ -1111,16 +1005,13 @@ export default function VendeFacilChile() {
         const { data: urlData } = supabase.storage.from('productos').getPublicUrl(fileName);
         imagenUrl = urlData.publicUrl;
       }
-      const updates = {
+      const { data, error } = await supabase.from('productos').update({
         nombre: formData.nombre,
         precio: parseFloat(formData.precio),
         descripcion: formData.descripcion,
         imagen: imagenUrl,
         tipo_venta: formData.tipo_venta,
-        rescata: formData.rescata,
-      };
-      if (formData.stock !== '') updates.stock = parseInt(formData.stock, 10);
-      const { data, error } = await supabase.from('productos').update(updates).eq('id', formData.id).select().single();
+      }).eq('id', formData.id).select().single();
       if (error) { setError(error.message); return; }
       setProductos(prev => prev.map(p => p.id === data.id ? data : p));
       setEditandoProducto(null);
@@ -1725,7 +1616,7 @@ export default function VendeFacilChile() {
                       <label className="flex flex-col items-center justify-center w-full border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:border-[#16a34a] hover:bg-green-50 transition overflow-hidden" style={{minHeight:'120px'}}>
                         {imagenPreview ? (
                           <div className="relative w-full">
-                            <img src={imagenPreview} alt="preview" className="w-full h-36 object-cover" style={{height:"160px",objectFit:"cover",width:"100%"}} />
+                            <img src={imagenPreview} alt="preview" className="w-full h-36 object-cover" />
                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 hover:opacity-100 transition">
                               <p className="text-white text-xs font-bold">Cambiar foto</p>
                             </div>
@@ -1750,27 +1641,20 @@ export default function VendeFacilChile() {
                         <option value="bolsa">Por Bolsa</option>
                       </select>
                     </div>
-                    <div>
-                      <label className="block text-sm font-bold text-gray-700 mb-1.5">Stock disponible</label>
-                      <input type="number" min="0" value={formProducto.stock} onChange={e => setFormProducto({ ...formProducto, stock: e.target.value })} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#16a34a] focus:outline-none transition" placeholder="Dejar vacío = sin límite" />
-                    </div>
-                    <div className="flex items-center gap-3 mt-2">
-                      <input id="rescata-checkbox" type="checkbox" checked={formProducto.rescata} onChange={e => setFormProducto({ ...formProducto, rescata: e.target.checked })} className="h-5 w-5 rounded border-gray-300 text-[#16a34a] focus:ring-[#16a34a]" />
-                      <label htmlFor="rescata-checkbox" className="text-sm font-bold text-gray-700">Producto Rescata</label>
-                    </div>
                   </div>
                   <button type="submit" disabled={loading} className="w-full bg-[#16a34a] text-white py-3 rounded-xl font-black hover:bg-[#15803d] transition disabled:opacity-50 shadow-lg shadow-green-100">
-                    {loading ? "Agregando..." : "+ Agregar producto"}
-                    
+                    {subiendoFoto ? 'Subiendo foto...' : loading ? 'Guardando...' : '+ Agregar producto'}
                   </button>
                 </form>
               </div>
 
               {/* Mis productos */}
               <div>
-                <h3 className="text-2xl font-black text-gray-900 mb-6 font-['Fraunces']">
-                  Mis productos <span className="text-[#16a34a]">({productos.length})</span>
-                </h3>
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-2xl font-black text-gray-900 font-['Fraunces']">
+                    Mis productos <span className="text-[#16a34a]">({productos.filter(p => !p.rescata).length})</span>
+                  </h3>
+                </div>
                 {productos.length === 0 ? (
                   <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200">
                     <p className="text-5xl mb-4">📦</p>
@@ -1796,11 +1680,7 @@ export default function VendeFacilChile() {
                         <div className="p-5">
                           <h4 className="font-black text-gray-800">{p.nombre}</h4>
                           {p.descripcion && <p className="text-sm text-gray-500 mt-1">{p.descripcion}</p>}
-                          <div className="flex flex-wrap items-center gap-2 mt-2">
-                            <p className="text-xs text-gray-400">📦 {p.tipo_venta}</p>
-                            {typeof p.stock === 'number' && <span className="text-xs font-bold text-gray-700">Stock: {p.stock}</span>}
-                            {p.rescata && <span className="inline-flex rounded-full bg-orange-100 text-orange-700 px-2 py-1 text-[11px] font-black">RESCATA</span>}
-                          </div>
+                          <p className="text-xs text-gray-400 mt-1">📦 {p.tipo_venta}</p>
                           <p className="text-xl font-black text-[#16a34a] mt-3">${p.precio.toLocaleString('es-CL')}</p>
                           <div className="flex gap-2 mt-4">
                             <button
@@ -1822,6 +1702,52 @@ export default function VendeFacilChile() {
                   </div>
                 )}
               </div>
+
+              {/* ── Sección Rescata ── */}
+              <div className="bg-gradient-to-r from-orange-50 to-yellow-50 border-2 border-orange-200 rounded-3xl p-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className="text-3xl">🛒</span>
+                  <div>
+                    <h3 className="text-2xl font-black text-orange-600 font-['Fraunces']">Rescata</h3>
+                    <p className="text-sm text-orange-500">Productos muy maduros o imperfectos a precio rebajado</p>
+                  </div>
+                </div>
+                <div className="bg-white rounded-2xl p-5 mb-6 border border-orange-100">
+                  <p className="text-sm text-gray-500 mb-3">Para agregar un producto Rescata, crea o edita un producto y activa el checkbox <strong>"Producto Rescata"</strong>.</p>
+                  <button
+                    onClick={() => window.scrollTo({top:0, behavior:'smooth'})}
+                    className="flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition"
+                  >
+                    + Agregar producto Rescata
+                  </button>
+                </div>
+                {productos.filter(p => p.rescata).length === 0 ? (
+                  <div className="text-center py-8 bg-white rounded-2xl border-2 border-dashed border-orange-200">
+                    <p className="text-4xl mb-2">🍋</p>
+                    <p className="text-gray-400 font-medium text-sm">No tienes productos Rescata aún</p>
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {productos.filter(p => p.rescata).map(p => (
+                      <div key={p.id} className="bg-white rounded-2xl border border-orange-100 overflow-hidden shadow-sm">
+                        <div className="h-32 overflow-hidden bg-orange-50" style={{position:'relative'}}>
+                          {p.imagen
+                            ? <img src={p.imagen} alt={p.nombre} className="absolute inset-0 w-full h-full object-cover" style={{display:'block'}} />
+                            : <div className="flex items-center justify-center h-full text-3xl">🛒</div>}
+                          <div className="absolute top-2 left-2 bg-orange-500 text-white text-xs font-black px-2 py-1 rounded-full">RESCATA</div>
+                        </div>
+                        <div className="p-4">
+                          <h4 className="font-black text-gray-800">{p.nombre}</h4>
+                          {p.descripcion && <p className="text-xs text-gray-500 mt-1">{p.descripcion}</p>}
+                          <p className="text-xl font-black text-orange-600 mt-2">${p.precio.toLocaleString('es-CL')}</p>
+                          {p.stock != null && <p className="text-xs text-gray-400 mt-1">Stock: {p.stock}</p>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
         </div>
