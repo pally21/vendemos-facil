@@ -169,6 +169,7 @@ function TiendaPublica({ slug }) {
 
                       {/* Descripción */}
                       {p.descripcion && <p className="text-base text-gray-500 mt-1 leading-snug">{p.descripcion}</p>}
+                      {p.stock != null && <p className="text-xs text-orange-500 font-bold mt-1">📦 Stock disponible: {p.stock}</p>}
 
                       {/* Tipo de venta — bien visible */}
                       <div className="mt-3 inline-flex items-center bg-green-50 border border-green-200 rounded-xl px-3 py-1.5">

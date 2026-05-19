@@ -25,6 +25,8 @@ function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }) 
     descripcion: producto.descripcion || '',
     imagen: producto.imagen || '',
     tipo_venta: producto.tipo_venta || 'individual',
+    stock: producto.stock ?? '',
+    rescata: producto.rescata || false,
     imagenFile: null,
     imagenPreview: producto.imagen || '',
   });
@@ -100,6 +102,14 @@ function ModalEditarProducto({ producto, onCerrar, onGuardar, loading, error }) 
               <option value="paquete">Por Paquete</option>
               <option value="bolsa">Por Bolsa</option>
             </select>
+          </div>
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1.5">Stock disponible</label>
+            <input type="number" min="0" value={form.stock} onChange={e => setForm(f => ({ ...f, stock: e.target.value }))} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#16a34a] focus:outline-none" placeholder="Vacío = sin límite" />
+          </div>
+          <div className="flex items-center gap-3">
+            <input id="rescata-edit" type="checkbox" checked={form.rescata} onChange={e => setForm(f => ({ ...f, rescata: e.target.checked }))} className="h-5 w-5 rounded border-gray-300" />
+            <label htmlFor="rescata-edit" className="text-sm font-bold text-gray-700">🛒 Producto Rescata</label>
           </div>
           <div className="flex gap-3 pt-2">
             <button onClick={onCerrar} className="flex-1 py-3 border-2 border-gray-200 rounded-xl font-bold text-gray-600 hover:bg-gray-50 transition">
@@ -1692,6 +1702,7 @@ export default function VendeFacilChile() {
                         <div className="p-5">
                           <h4 className="font-black text-gray-800">{p.nombre}</h4>
                           {p.descripcion && <p className="text-sm text-gray-500 mt-1">{p.descripcion}</p>}
+                          {p.stock != null && <p className="text-xs text-orange-500 font-bold mt-1">📦 Stock: {p.stock}</p>}
                           <p className="text-xs text-gray-400 mt-1">📦 {p.tipo_venta}</p>
                           <p className="text-xl font-black text-[#16a34a] mt-3">${p.precio.toLocaleString('es-CL')}</p>
                           <div className="flex gap-2 mt-4">
