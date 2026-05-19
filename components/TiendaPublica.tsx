@@ -145,14 +145,14 @@ function TiendaPublica({ slug }) {
         {/* Catálogo */}
         <div className="lg:col-span-2">
           <h2 className="text-2xl font-black text-gray-800 mb-6 font-['Fraunces']">Catálogo</h2>
-          {productos.length === 0 ? (
+          {productos.filter(p => !p.rescata).length === 0 ? (
             <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200">
               <p className="text-5xl mb-4">📦</p>
               <p className="text-gray-400 font-medium">Esta tienda aún no tiene productos.</p>
             </div>
           ) : (
             <div className="grid sm:grid-cols-2 gap-5">
-              {productos.map(p => {
+              {productos.filter(p => !p.rescata).map(p => {
                 const enCarrito = carrito.find(i => i.id === p.id);
                 return (
                   <div key={p.id} className="bg-white rounded-2xl shadow-sm border border-green-100 overflow-hidden hover:shadow-md transition-all">
