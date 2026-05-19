@@ -810,7 +810,7 @@ export default function VendeFacilChile() {
   const [successMsg, setSuccessMsg] = useState('');
 
   const [formTienda, setFormTienda] = useState({ nombre: '', descripcion: '', telefono: '', delivery_costo: '' });
-  const [formProducto, setFormProducto] = useState({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center' });
+  const [formProducto, setFormProducto] = useState({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center', stock: '', rescata: false });
   const [imagenFile, setImagenFile] = useState(null);
   const [imagenPreview, setImagenPreview] = useState(null);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
@@ -974,10 +974,12 @@ export default function VendeFacilChile() {
         tipo_venta: formProducto.tipo_venta,
         imagen_posicion: formProducto.imagen_posicion || 'center',
         tienda_id: miTienda.id,
+        rescata: formProducto.rescata || false,
+        stock: formProducto.stock !== '' ? parseInt(formProducto.stock, 10) : null,
       }]).select().single();
       if (error) { setError(error.message); return; }
       setProductos(prev => [...prev, data]);
-      setFormProducto({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center' });
+      setFormProducto({ nombre: '', precio: '', descripcion: '', imagen: '', tipo_venta: 'individual', imagen_posicion: 'center', stock: '', rescata: false });
       setImagenFile(null);
       setImagenPreview(null);
       setSuccessMsg('¡Producto agregado! ✅');
@@ -1640,6 +1642,16 @@ export default function VendeFacilChile() {
                         <option value="paquete">Por Paquete</option>
                         <option value="bolsa">Por Bolsa</option>
                       </select>
+                    </div>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-1.5">Stock disponible</label>
+                      <input type="number" min="0" value={formProducto.stock} onChange={e => setFormProducto({ ...formProducto, stock: e.target.value })} className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-xl focus:border-[#16a34a] focus:outline-none transition" placeholder="Vacío = sin límite" />
+                    </div>
+                    <div className="flex items-center gap-3 pt-6">
+                      <input id="rescata-cb" type="checkbox" checked={formProducto.rescata} onChange={e => setFormProducto({ ...formProducto, rescata: e.target.checked })} className="h-5 w-5 rounded border-gray-300" />
+                      <label htmlFor="rescata-cb" className="text-sm font-bold text-gray-700">🛒 Producto Rescata</label>
                     </div>
                   </div>
                   <button type="submit" disabled={loading} className="w-full bg-[#16a34a] text-white py-3 rounded-xl font-black hover:bg-[#15803d] transition disabled:opacity-50 shadow-lg shadow-green-100">
